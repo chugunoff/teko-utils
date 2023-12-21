@@ -1,115 +1,122 @@
 <template>
   <main>
     <div class="form">
-      <div>
-        <Badge class="badge">Базовое значение</Badge>
-        <Input v-model="baseDescription" type="text" placeholder="Базовое значение" />
-      </div>
-
-      <div class="variables">
-        <Badge class="badge">Переменные</Badge>
-
-        <div class="flex flex-col gap-3">
-          <div
-            v-for="(tableVariable, tvIndex) in tableVariables"
-            :key="tvIndex"
-            class="flex flex-row gap-2"
-          >
-            <div class="mb-2">
-              <div class="flex flex-row gap-1">
-                <Input v-model="tableVariable.name" placeholder="Название переменной" />
-
-                <Button
-                  v-if="tableVariable.values.length > 1"
-                  variant="outline"
-                  size="icon"
-                  @click="() => deleteTV(tvIndex)"
-                >
-                  <Trash2 class="w-4 h-4" />
-                </Button>
-              </div>
+      <div class="flex flex-row flex-wrap gap-9">
+        <div>
+          <Badge class="mb-2">Обозначение</Badge>
+          <div class="flex flex-row gap-2">
+            <div class="w-20">
+              <Input v-model="groupDescription" type="text" placeholder="Группа" />
             </div>
-
-            <div class="flex flex-col gap-2">
-              <div
-                v-for="(tvValue, tvvIndex) in tableVariable.values"
-                :key="tvvIndex"
-                class="flex flex-row gap-1"
-              >
-                <Input
-                  :id="tableVariable.name + '-tvValue' + tvvIndex"
-                  :modelValue="tvValue"
-                  @update:model-value="(value) => updateTVValue(tvIndex, tvvIndex, value as string)"
-                  @keyup.enter="() => addTVValue(tvIndex, tvvIndex, tableVariable.name)"
-                />
-
-                <Button
-                  v-if="tableVariable.values.length > 1"
-                  variant="outline"
-                  size="icon"
-                  @click="() => deleteTVValue(tvIndex, tvvIndex)"
-                >
-                  <Trash2 class="w-4 h-4" />
-                </Button>
-              </div>
+            <div class="w-28">
+              <Input v-model="numberDescription" type="text" placeholder="Номер" />
             </div>
           </div>
+        </div>
 
-          <Button @click="addTV">Добавить переменную</Button>
+        <div>
+          <Badge class="mb-2">Генерация</Badge>
+          <div class="flex flex-row gap-2">
+            <Button variant="outline" @click="copyText">copy</Button>
+            <Button variant="outline" @click="() => generateTxt(true)">new tab</Button>
+            <Button variant="outline" @click="() => generateTxt(false)">.txt</Button>
+          </div>
         </div>
       </div>
 
-      <Button @click="unionAll">Объеденить</Button>
-    </div>
+      <div class="overflow-auto">
+        <div class="flex flex-row items-center gap-3 mb-2">
+          <Badge>Переменные</Badge>
 
-    <Textarea v-model="resultTxt" placeholder="Type your message here." />
+          <Button size="icon" class="w-6 h-6 rounded-full" @click="addTV">
+            <Plus class="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div class="flex flex-row flex-nowrap gap-3">
+          <div
+            v-for="(tableVariable, tvIndex) in tableVariables"
+            :key="tvIndex"
+            class="flex flex-col gap-2 min-w-56 w-56"
+          >
+            <div class="mb-2">
+              <Label for="email">Название переменной</Label>
+              <div class="flex flex-row gap-1">
+                <Input v-model="tableVariable.name" placeholder="Название переменной" />
+
+                <Button variant="ghost" size="icon" @click="() => deleteTV(tvIndex)">
+                  <X class="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label for="email">Значения переменной</Label>
+
+              <div class="flex flex-col gap-2">
+                <div
+                  v-for="(tvValue, tvvIndex) in tableVariable.values"
+                  :key="tvvIndex"
+                  class="flex flex-row gap-1"
+                >
+                  <Input
+                    :id="tableVariable.uid + '-tvValue' + tvvIndex"
+                    :modelValue="tvValue"
+                    @update:model-value="
+                      (value) => updateTVValue(tvIndex, tvvIndex, value as string)
+                    "
+                    @keyup.enter="() => addTVValue(tvIndex, tvvIndex, tableVariable.uid)"
+                  />
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    @click="() => deleteTVValue(tvIndex, tvvIndex)"
+                  >
+                    <X class="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { nanoid } from 'nanoid';
 import type { TableVariable } from '@/types/app';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Trash2 } from 'lucide-vue-next';
+import { Label } from '@/components/ui/label';
+import { X, Plus } from 'lucide-vue-next';
 
-const baseDescription = ref<string>('ТЭФ.08.999.');
+const DIVIDER = ';;;';
+const ORGANIZATION = 'ТЭФ';
+
+const groupDescription = ref<string>('');
+const numberDescription = ref<string>('');
 const tableVariables = ref<TableVariable[]>([
-  {
-    uid: '1',
-    name: 'd',
-    values: ['15', '20', '25', '3', '4', '5', '6', '7'],
-  },
-  {
-    uid: '2',
-    name: 'h',
-    values: ['3', '4', '5', '6', '7', '3', '4', '5', '6', '7'],
-  },
-  {
-    uid: '3',
-    name: 'w',
-    values: ['3', '4', '5', '6', '7', '3', '4', '5', '6', '7'],
-  },
-  {
-    uid: '4',
-    name: 'g',
-    values: ['3', '4', '5', '6', '7', '3', '4', '5', '6', '7'],
-  },
-  {
-    uid: '5',
-    name: 'x',
-    values: ['3', '4', '5', '6', '7', '3', '4', '5', '6', '7'],
-  },
-  {
-    uid: '5',
-    name: 'x',
-    values: ['3', '4', '5', '6', '7', '3', '4', '5', '6', '7'],
-  },
+  // {
+  //   uid: '1',
+  //   name: 'd',
+  //   values: ['15', '20', '25', '3', '4', '5', '6', '7'],
+  // },
+  // {
+  //   uid: '2',
+  //   name: 'h',
+  //   values: ['3', '4', '5', '6', '7', '3', '4', '5', '6', '7'],
+  // },
 ]);
 const resultTxt = ref<string>('');
+
+const baseDescription = computed<string>(() => {
+  return ORGANIZATION + '.' + groupDescription.value + '.' + numberDescription.value + '.';
+});
 
 function addTV(): void {
   tableVariables.value.push({
@@ -123,7 +130,7 @@ function deleteTV(tvIndex: number): void {
   tableVariables.value = tableVariables.value.filter((_, index) => index !== tvIndex);
 }
 
-function addTVValue(tvIndex: number, tvvIndex: number, tvName: string): void {
+function addTVValue(tvIndex: number, tvvIndex: number, tvUid: string): void {
   if (tvvIndex !== tableVariables.value[tvIndex].values.length - 1) {
     return;
   }
@@ -131,7 +138,7 @@ function addTVValue(tvIndex: number, tvvIndex: number, tvName: string): void {
   const newLength = tableVariables.value[tvIndex].values.push('');
 
   nextTick(() => {
-    document.getElementById(tvName + '-tvValue' + (newLength - 1))?.focus();
+    document.getElementById(tvUid + '-tvValue' + (newLength - 1))?.focus();
   });
 }
 
@@ -140,14 +147,19 @@ function updateTVValue(tvIndex: number, tvvIndex: number, value: string): void {
 }
 
 function deleteTVValue(tvIndex: number, tvvIndex: number): void {
-  tableVariables.value[tvIndex].values = tableVariables.value[tvIndex].values.filter(
-    (_, index) => index !== tvvIndex,
-  );
+  if (tableVariables.value[tvIndex].values.length === 1) {
+    tableVariables.value[tvIndex].values[tvvIndex] = '';
+  } else {
+    tableVariables.value[tvIndex].values = tableVariables.value[tvIndex].values.filter(
+      (_, index) => index !== tvvIndex,
+    );
+  }
 }
 
 function unionAll(): void {
   const result: string[] = [];
 
+  // Обработать переменные
   const firstColumnValues = tableVariables.value[0].values;
 
   for (let i = 0; i < firstColumnValues.length; i++) {
@@ -159,9 +171,9 @@ function unionAll(): void {
       const value = tableVariables.value[columnIndex].values[i].trim();
 
       if (tableVariables.value[columnIndex + 1]) {
-        next(columnIndex + 1, upValue + ';;;' + value);
+        next(columnIndex + 1, upValue + DIVIDER + value);
       } else {
-        result.push(upValue + ';;;' + value);
+        result.push(upValue + DIVIDER + value);
       }
     }
   }
@@ -176,8 +188,12 @@ function unionAll(): void {
   }
 
   for (let i = 0; i < result.length; i++) {
-    result[i] = baseDescription.value + formatIndex(i) + ';;;' + result[i];
+    result[i] = baseDescription.value + formatIndex(i) + DIVIDER + result[i];
   }
+
+  // Добавить заголовки столбцов
+  const headers = tableVariables.value.map((item) => item.name).join(DIVIDER);
+  result.unshift('Обозначение' + DIVIDER + headers);
 
   resultTxt.value = result.join('\n');
 }
@@ -216,6 +232,34 @@ function addBeforeZero(value: number, resultSymbolCount: number): string {
 
   return result;
 }
+
+function copyText(): void {
+  unionAll();
+
+  navigator.clipboard.writeText(resultTxt.value);
+}
+
+function generateTxt(newTab: boolean): void {
+  unionAll();
+
+  const blob = new Blob([resultTxt.value], { type: 'text/plain;charset=utf8' });
+
+  const url = URL.createObjectURL(blob);
+
+  if (newTab) {
+    window.open(url);
+  } else {
+    const aEl = document.createElement('a');
+    document.body.appendChild(aEl);
+    aEl.style.display = 'none';
+    aEl.download = `${
+      ORGANIZATION + '.' + groupDescription.value + '.' + numberDescription.value
+    }.txt`;
+    aEl.href = url;
+    aEl.click();
+    aEl.remove();
+  }
+}
 </script>
 
 <style scoped>
@@ -224,14 +268,7 @@ function addBeforeZero(value: number, resultSymbolCount: number): string {
   flex-direction: column;
   gap: 16px;
 
-  width: 100%;
-  max-width: 800px;
-
   padding: 12px;
   margin: auto;
-}
-
-.badge {
-  margin-bottom: 8px;
 }
 </style>
